@@ -28,7 +28,7 @@ def test_seed_inserts_all_sample_permissions(tmp_path):
 
     total = seed_database(db_path)
 
-    assert total == 11
+    assert total == 12
 
     with sqlite3.connect(db_path) as connection:
         denied = connection.execute(
@@ -51,4 +51,4 @@ def test_seeding_twice_does_not_duplicate_rows(tmp_path):
     seed_database(db_path)
     total = seed_database(db_path)
 
-    assert total == 11
+    assert total == 12

@@ -17,6 +17,13 @@ SAMPLE_PERMISSIONS = [
     (9, "admin789", "read", "*", "allow"),
     (10, "admin789", "write", "*", "allow"),
     (11, "admin789", "delete", "*", "allow"),
+    (
+        12,
+        "iPxVX62f4EBI49taG5tXNS2r9HsS29jH@clients",
+        "read",
+        "accounts",
+        "allow",
+    ),
 ]
 
 
