@@ -63,6 +63,7 @@ def authorize(request: AuthorizationRequest):
         raise HTTPException(
             status_code=401,
             detail="Access token is required",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     try:
@@ -79,6 +80,7 @@ def authorize(request: AuthorizationRequest):
         raise HTTPException(
             status_code=401,
             detail="Token does not contain a user identity",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     action = get_action(request.method)
@@ -88,7 +90,8 @@ def authorize(request: AuthorizationRequest):
             detail="Unsupported HTTP method",
         )
 
-    resource = request.path.strip("/")
+    # Remove surrounding whitespace and slashes before validation.
+    resource = request.path.strip().strip("/")
     if not resource:
         raise HTTPException(
             status_code=400,

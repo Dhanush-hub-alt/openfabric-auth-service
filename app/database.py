@@ -1,4 +1,3 @@
-
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -61,6 +60,7 @@ def database_connection(
 
     try:
         yield connection
+        connection.commit()
     except Exception:
         connection.rollback()
         raise

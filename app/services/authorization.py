@@ -108,8 +108,8 @@ def resolve_permission(user_id: str, action: str, resource: str):
     Rules:
     1. Only permissions for the requested user and action are considered.
     2. Resource patterns must match the requested resource.
-    3. If any matching permission is 'deny', deny overrides allow.
-    4. If no deny exists, the most-specific matching allow rules apply.
+    3. The most-specific matching pattern takes precedence.
+    4. If equally specific matching rules conflict, deny wins.
     5. If no permission matches, access is denied.
 
     Returns:
@@ -140,36 +140,29 @@ def resolve_permission(user_id: str, action: str, resource: str):
     if not matching_rows:
         return False, []
 
-    # Deny-overrides: any matching deny permission wins,
-    # even if another matching rule allows access.
-    deny_rows = [
+    # Select the most-specific matching resource patterns first.
+    highest_specificity = max(
+        permission_specificity(row["resource"])
+        for row in matching_rows
+    )
+
+    selected_rows = [
         row
         for row in matching_rows
-        if row["effect"] == "deny"
+        if permission_specificity(row["resource"])
+        == highest_specificity
     ]
 
-    if deny_rows:
-        selected_rows = deny_rows
-        allowed = False
-    else:
-        # No matching deny exists, so choose the most-specific
-        # matching allow permissions.
-        highest_specificity = max(
-            permission_specificity(row["resource"])
-            for row in matching_rows
-        )
+    # Deny wins if equally specific rules conflict.
+    has_deny = any(
+        row["effect"] == "deny"
+        for row in selected_rows
+    )
 
-        selected_rows = [
-            row
-            for row in matching_rows
-            if permission_specificity(row["resource"])
-            == highest_specificity
-        ]
-
-        allowed = all(
-            row["effect"] == "allow"
-            for row in selected_rows
-        )
+    allowed = not has_deny and all(
+        row["effect"] == "allow"
+        for row in selected_rows
+    )
 
     matched_permissions = [
         {
@@ -187,4 +180,3 @@ def check_permission(user_id: str, action: str, resource: str) -> bool:
     """Return whether the user is authorized for the requested resource."""
     allowed, _ = resolve_permission(user_id, action, resource)
     return allowed
-

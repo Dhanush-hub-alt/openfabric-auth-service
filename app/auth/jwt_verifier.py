@@ -18,18 +18,19 @@ def verify_access_token(token: str) -> dict:
     """
     Verify an Auth0 access token and return its trusted claims.
 
-    Validates the signature, expiration, issuer, and audience.
+    Validates the JWT signature, expiration, issuer, audience,
+    and required claims.
     """
     if not AUTH0_DOMAIN or not AUTH0_AUDIENCE:
         raise RuntimeError(
             "AUTH0_DOMAIN and AUTH0_AUDIENCE must be configured."
         )
 
-    if not token or not token.strip():
-        raise AuthenticationError("Access token is missing.")
-
     if not AUTH0_ALGORITHMS:
         raise RuntimeError("AUTH0_ALGORITHMS must be configured.")
+
+    if not token or not token.strip():
+        raise AuthenticationError("Access token is missing.")
 
     issuer = f"https://{AUTH0_DOMAIN}/"
     jwks_url = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
@@ -49,9 +50,10 @@ def verify_access_token(token: str) -> dict:
             },
         )
 
-        if not claims.get("sub"):
+        subject = claims.get("sub")
+        if not isinstance(subject, str) or not subject.strip():
             raise AuthenticationError(
-                "Access token does not contain a subject."
+                "Access token does not contain a valid subject."
             )
 
         return claims
@@ -65,4 +67,9 @@ def verify_access_token(token: str) -> dict:
     except (OSError, ValueError) as exc:
         raise AuthenticationError(
             "Unable to retrieve or validate Auth0 signing keys."
+        ) from exc
+    except Exception as exc:
+        # Avoid exposing token contents or internal exception details.
+        raise AuthenticationError(
+            "Unable to validate access token."
         ) from exc
