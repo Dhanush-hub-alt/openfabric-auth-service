@@ -1,694 +1,343 @@
-\# Authentication \& Authorization Service
+# Authentication & Authorization Service
 
+A Python and FastAPI service that validates OAuth2 JWT access tokens and evaluates fine-grained user permissions stored in SQLite. The service returns an `ALLOW` or `DENY` decision for a requested HTTP method and resource path.
 
+## Features
 
-A Python and FastAPI service that validates OAuth2 access tokens and checks fine-grained user permissions stored in SQLite. The service returns an `ALLOW` or `DENY` decision for a requested HTTP method and resource path.
+- JWT access-token verification using Auth0 and JSON Web Key Sets (JWKS).
+- Validation of token signature, expiration, issuer, and audience.
+- Extraction of the authenticated user identity from validated token claims.
+- SQLite-backed permission storage.
+- HTTP method-to-action mapping.
+- Wildcard resource matching, including nested resource paths.
+- Specificity-based permission resolution.
+- Deny precedence when conflicting permissions have equal specificity.
+- Default-deny behavior when no permission matches.
+- Automated database, authorization, and API tests using pytest.
 
+## Technology Stack
 
+- Python 3.9+
+- FastAPI
+- Uvicorn
+- SQLite
+- PyJWT
+- Auth0
+- pytest
 
-\## Features
-
-
-
-\- OAuth2 JWT access-token validation.
-
-\- User identity extraction from validated token claims.
-
-\- SQLite-backed user permissions.
-
-\- HTTP method-to-action mapping.
-
-\- Resource matching with wildcard and nested-resource support.
-
-\- Specificity-based permission resolution.
-
-\- Deny precedence for conflicting rules of equal specificity.
-
-\- Default-deny behavior when no permission matches.
-
-\- Automated database, authorization, and API tests using pytest.
-
-
-
-\## Technology Stack
-
-
-
-\- Python 3.9+
-
-\- FastAPI
-
-\- Uvicorn
-
-\- SQLite
-
-\- Auth0 for OAuth2/JWT authentication
-
-\- pytest
-
-
-
-\## Project Structure
-
-
+## Project Structure
 
 ```text
-
 openfabric-auth-service/
-
 ├── app/
-
 │   ├── auth/
-
-│   │   └── jwt\_verifier.py
-
+│   │   └── jwt_verifier.py
 │   ├── services/
-
 │   │   └── authorization.py
-
 │   ├── config.py
-
 │   ├── database.py
-
 │   └── main.py
-
 ├── data/
-
 ├── scripts/
-
-│   ├── seed\_database.py
-
-│   └── test\_permissions.py
-
+│   ├── seed_database.py
+│   └── test_permissions.py
 ├── tests/
-
-│   ├── test\_api.py
-
-│   ├── test\_authorization.py
-
-│   └── test\_database.py
-
+│   ├── test_api.py
+│   ├── test_authorization.py
+│   └── test_database.py
 ├── .env.example
-
 ├── .gitignore
-
 ├── requirements.txt
-
 └── README.md
-
 ```
 
+## Prerequisites
 
+- Python 3.9 or later.
+- Git.
+- An Auth0 tenant and an API configured with an audience.
+- An access token issued for that API.
 
-\## Prerequisites
+## Setup
 
+### 1. Open the project directory
 
-
-\- Python 3.9 or later.
-
-\- An OAuth2 identity provider account, such as Auth0.
-
-\- An access token issued for the API audience configured in the environment.
-
-
-
-\## Setup
-
-
-
-\### 1. Open the project directory
-
-
-
-In Windows PowerShell, navigate to the project directory:
-
-
+In Windows PowerShell:
 
 ```powershell
-
-cd C:\\Users\\dhanu\\openfabric-auth-service
-
+cd C:\Users\dhanu\openfabric-auth-service
 ```
 
-
-
-\### 2. Create and activate a virtual environment
-
-
+### 2. Create and activate a virtual environment
 
 ```powershell
-
 python -m venv .venv
-
-.\\.venv\\Scripts\\Activate.ps1
-
+.\.venv\Scripts\Activate.ps1
 ```
 
+If PowerShell prevents activation, use the virtual environment's Python executable directly.
 
-
-If PowerShell blocks virtual-environment activation, use the environment's Python executable directly:
-
-
+### 3. Install dependencies
 
 ```powershell
-
-.\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt
-
-```
-
-
-
-\### 3. Install dependencies
-
-
-
-With the virtual environment activated, run:
-
-
-
-```powershell
-
 python -m pip install -r requirements.txt
-
 ```
 
+### 4. Configure environment variables
 
-
-\### 4. Configure environment variables
-
-
-
-Create a local environment file from the example:
-
-
+Create a local `.env` file:
 
 ```powershell
-
 Copy-Item .env.example .env
-
 notepad .env
-
 ```
 
+Configure the following values using your Auth0 API settings:
 
+| Variable | Purpose |
+|---|---|
+| `AUTH0_DOMAIN` | Auth0 tenant domain |
+| `AUTH0_AUDIENCE` | Identifier of the API for which the token was issued |
+| `AUTH0_ALGORITHMS` | Permitted JWT signing algorithms; defaults to `RS256` |
+| `DATABASE_PATH` | SQLite database location; defaults to `./data/permissions.db` |
 
-Fill in the values required by `app/config.py` and the JWT verifier. For an Auth0 configuration, these commonly include:
+Use the exact values for your Auth0 tenant and API. The example values are placeholders and will not authenticate real tokens.
 
+**Security:** Never commit `.env`, access tokens, client secrets, or other credentials to source control. Only placeholder values should be stored in `.env.example`.
 
+### 5. Initialize and seed the database
 
-\- Auth0 domain or issuer.
-
-\- API audience.
-
-\- Database path, if configurable.
-
-
-
-Use the exact variable names defined in `.env.example` and `app/config.py`.
-
-
-
-\*\*Security:\*\* Never commit `.env`, access tokens, client secrets, or other credentials to source control. The `.env.example` file should contain placeholders only.
-
-
-
-\### 5. Initialize and seed the database
-
-
-
-Run:
-
-
+Run the project's database seeding script:
 
 ```powershell
-
-python -m scripts.seed\_database
-
+python -m scripts.seed_database
 ```
 
+This script initializes the SQLite database and inserts the sample permission records defined by the project.
 
+If you modify the seed data, verify the resulting records before using them in a demonstration.
 
-This initializes the SQLite database and inserts the sample permission records.
-
-
-
-\## Run the Service
-
-
+## Run the Service
 
 Start the development server:
 
-
-
 ```powershell
-
 python -m uvicorn app.main:app --reload
-
 ```
 
+The service is available at:
 
+- Health check: `http://127.0.0.1:8000/health`
+- Interactive API documentation: `http://127.0.0.1:8000/docs`
 
-The service will be available at:
+Keep the server running while testing requests.
 
+## API Usage
 
+### `POST /authorize`
 
-\- Health check: `http://127.0.0.1:8000/health`
+Checks whether the authenticated user is permitted to perform an action on a resource.
 
-\- Interactive API documentation: `http://127.0.0.1:8000/docs`
-
-
-
-Keep the terminal running while testing the API.
-
-
-
-\## API Usage
-
-
-
-\### `POST /authorize`
-
-
-
-Checks whether a user can perform an action on a resource.
-
-
-
-\#### Request body
-
-
-
-The request must contain:
-
-
+#### Request body
 
 | Field | Type | Description |
-
 |---|---|---|
-
-| `access\_token` | String | OAuth2 access token to validate |
-
+| `access_token` | String | OAuth2 access token to validate |
 | `method` | String | HTTP method representing the requested action |
-
 | `path` | String | Resource path to authorize |
 
-
-
-Example:
-
-
+Example request:
 
 ```json
-
 {
-
-&#x20; "access\_token": "YOUR\_ACCESS\_TOKEN",
-
-&#x20; "method": "GET",
-
-&#x20; "path": "/wallets/wallet-789/transactions"
-
+  "access_token": "YOUR_ACCESS_TOKEN",
+  "method": "GET",
+  "path": "/wallets/wallet-789/transactions"
 }
-
 ```
 
+Replace `YOUR_ACCESS_TOKEN` with a valid access token issued for the configured API audience.
 
+The user identity extracted from the validated token must correspond to a user with applicable permission records in the database.
 
-Replace `YOUR\_ACCESS\_TOKEN` with a valid access token issued for the configured API audience.
-
-
-
-The user identity extracted from the token must match a `user\_id` in the permissions database for the seeded permission rules to grant access.
-
-
-
-\#### Windows PowerShell example
-
-
+#### Windows PowerShell example
 
 ```powershell
-
 $body = @{
-
-&#x20;   access\_token = "YOUR\_ACCESS\_TOKEN"
-
-&#x20;   method = "GET"
-
-&#x20;   path = "/wallets/wallet-789/transactions"
-
+    access_token = "YOUR_ACCESS_TOKEN"
+    method = "GET"
+    path = "/wallets/wallet-789/transactions"
 } | ConvertTo-Json
 
-
-
 Invoke-RestMethod `
-
-&#x20;   -Uri "http://127.0.0.1:8000/authorize" `
-
-&#x20;   -Method Post `
-
-&#x20;   -ContentType "application/json" `
-
-&#x20;   -Body $body
-
+    -Uri "http://127.0.0.1:8000/authorize" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $body
 ```
 
-
-
-\#### cURL example
-
-
+#### cURL example
 
 In Windows PowerShell, use `curl.exe`:
 
-
-
 ```powershell
-
 curl.exe -X POST "http://127.0.0.1:8000/authorize" `
-
-&#x20; -H "Content-Type: application/json" `
-
-&#x20; -d '{"access\_token":"YOUR\_ACCESS\_TOKEN","method":"GET","path":"/wallets/wallet-789/transactions"}'
-
+  -H "Content-Type: application/json" `
+  -d '{"access_token":"YOUR_ACCESS_TOKEN","method":"GET","path":"/wallets/wallet-789/transactions"}'
 ```
 
+Do not save real access tokens in this README or commit them to the repository.
 
+#### Example response
 
-Replace the placeholder with a valid access token. Do not save real tokens in this README or commit them to the repository.
-
-
-
-\#### Example response
-
-
-
-For a user with a matching read permission, the response has this shape:
-
-
+For a user whose validated identity is `user456` and whose matching read permission allows the requested resource, the response has this shape:
 
 ```json
-
 {
-
-&#x20; "decision": "ALLOW",
-
-&#x20; "user\_id": "user456",
-
-&#x20; "reason": "User has read permission for wallets/wallet-789/transactions",
-
-&#x20; "matched\_permissions": \[
-
-&#x20;   {
-
-&#x20;     "action": "read",
-
-&#x20;     "resource": "wallets/wallet-789/transactions",
-
-&#x20;     "effect": "allow"
-
-&#x20;   }
-
-&#x20; ]
-
+  "decision": "ALLOW",
+  "user_id": "user456",
+  "reason": "User has read permission for wallets/wallet-789/transactions",
+  "matched_permissions": [
+    {
+      "action": "read",
+      "resource": "wallets/wallet-789/transactions",
+      "effect": "allow"
+    }
+  ]
 }
-
 ```
 
+The actual identity, decision, reason, and matched permissions depend on the validated token and database contents.
 
-
-The `user\_id` and matched permission records depend on the validated token and the database contents.
-
-
-
-\#### Response fields
-
-
+#### Response fields
 
 | Field | Description |
-
 |---|---|
-
 | `decision` | `ALLOW` or `DENY` |
-
-| `user\_id` | Identity extracted from the validated token |
-
+| `user_id` | Identity extracted from the validated token |
 | `reason` | Explanation for the authorization decision |
+| `matched_permissions` | Permission records selected by the resolver |
 
-| `matched\_permissions` | Permission rules selected by the resolver |
+Authentication failures return HTTP 401 responses. Unsupported HTTP methods and invalid resource paths are rejected with HTTP 400 responses. Invalid request bodies are handled by FastAPI request validation.
 
-
-
-Authentication failures are returned as HTTP 401 responses. Unsupported HTTP methods and invalid resource paths are rejected with HTTP 400 responses. Invalid request bodies are handled by FastAPI request validation.
-
-
-
-\## HTTP Method Mapping
-
-
+## HTTP Method Mapping
 
 The service maps HTTP methods to permission actions:
 
-
-
 | HTTP method | Permission action |
-
 |---|---|
-
 | `GET` | `read` |
-
 | `POST` | `write` |
-
 | `PUT` | `write` |
-
 | `PATCH` | `write` |
-
 | `DELETE` | `delete` |
 
+Unsupported methods are rejected instead of being treated as authorized actions.
 
+## Permission Resolution Design
 
-Unsupported methods are rejected instead of being treated as an allowed action.
+The service validates the access token, extracts the authenticated user's identity, maps the HTTP method to an action, and evaluates matching permission patterns stored in SQLite.
 
+The resolver follows these rules:
 
+1. **Action filtering:** Consider permission records for the authenticated user and requested action.
+2. **Resource matching:** Compare the requested resource path with stored resource patterns.
+3. **Specificity:** Prefer the most-specific matching pattern. Specificity is determined by the number of literal path segments, the total number of segments, and the number of literal characters.
+4. **Equal-specificity conflict:** If matching rules of equal specificity conflict, deny takes precedence.
+5. **Default deny:** If no permission matches the request, deny access.
 
-\## Permission Resolution Design
+The wildcard character `*` can match zero or more path segments according to the resource-matching algorithm. For example, `wallets/*` can match nested wallet resource paths, and `wallets/*/transactions/*` can match transaction paths with or without a trailing transaction identifier.
 
+A more-specific rule can take precedence over a more-general rule. Deny precedence applies to conflicting rules of equal specificity; it does not mean every deny rule overrides every allow rule regardless of specificity.
 
+The automated authorization tests cover resource matching, wildcard edge cases, specificity, conflicting rules, and default-deny behavior.
 
-The service extracts the authenticated user's identity from the validated token, maps the HTTP method to a permission action, and evaluates matching resource patterns from SQLite.
+## Database Design
 
-
-
-The permission-resolution approach is:
-
-
-
-1\. \*\*Action filtering:\*\* Consider permission records for the authenticated user and requested action.
-
-2\. \*\*Resource matching:\*\* Compare the requested resource path with stored resource patterns.
-
-3\. \*\*Specificity:\*\* More-specific matching patterns take precedence over more-general patterns.
-
-4\. \*\*Conflicting rules:\*\* When selected rules have equal specificity and conflicting effects, deny takes precedence.
-
-5\. \*\*Default deny:\*\* If no permission matches the request, access is denied.
-
-
-
-The wildcard character `\*` can match path segments according to the resource-matching algorithm. Nested resource paths are evaluated against the stored pattern rather than automatically inheriting permission from every parent path.
-
-
-
-The specificity and deny-precedence behavior should be covered by tests, particularly when general allow rules overlap with more-specific deny rules. The implemented resolver's precedence should be checked against the assignment's requirement that deny wins when both allow and deny permissions apply to the same resource.
-
-
-
-\## Database Design
-
-
-
-The service uses a SQLite table named `user\_permissions`.
-
-
+The service uses a SQLite table named `user_permissions`.
 
 | Column | Description |
-
 |---|---|
-
 | `id` | Primary key |
-
-| `user\_id` | Identity associated with the permission |
-
+| `user_id` | Identity associated with the permission |
 | `action` | `read`, `write`, or `delete` |
-
 | `resource` | Resource path or wildcard pattern |
-
 | `effect` | `allow` or `deny` |
 
-
-
-The database schema and connection handling are implemented in `app/database.py`. Sample permission records are created by `scripts/seed\_database.py`.
-
-
+Database schema initialization, constraints, and connection handling are implemented in `app/database.py`. Sample permission records are created by `scripts/seed_database.py`.
 
 Database queries use parameterized SQL to avoid constructing queries by concatenating user-controlled values.
 
-
-
-\## Running Tests
-
-
+## Running Tests
 
 Run the automated test suite from the project directory:
 
-
-
 ```powershell
-
 python -m pytest -v
-
 ```
 
+The current automated test suite has **32 passing tests** in the verified local run. The tests cover database behavior, authorization decisions, resource matching, permission precedence, and API endpoint behavior.
 
+Some API tests mock token verification so endpoint behavior can be tested independently of an external identity provider. A passing mocked test suite does not, by itself, prove that token verification works against a live Auth0 tenant.
 
-The tests cover database initialization and seeding, HTTP method mapping, permission decisions, and API endpoint behavior.
+Before deployment or submission, verify JWT handling with valid and invalid tokens, including signature, expiration, issuer, and audience validation, using a controlled Auth0 configuration or appropriate isolated test tokens.
 
+## Design Decisions and Trade-offs
 
+### SQLite
 
-Some API tests mock token verification to test endpoint behavior independently of Auth0. JWT verification should also be tested with valid and invalid tokens, including checks for signature, expiration, issuer, and audience.
+SQLite provides lightweight persistence without requiring a separate database server. It is suitable for local development and a take-home assignment. A server-based database may be more appropriate for distributed deployments or workloads with higher concurrency requirements.
 
+### FastAPI
 
+FastAPI provides request validation, structured responses, and interactive API documentation through `/docs`.
 
-Before submission, make sure tests cover:
+### JWT-based authentication
 
+The service relies on an external identity provider to issue access tokens. The verifier checks token validity before the application trusts identity claims, separating authentication from permission evaluation.
 
+### Database-backed permissions
 
-\- Allowed and denied requests.
+Storing permissions in SQLite allows user-specific rules to be evaluated without hardcoding individual permissions into the API. Database indexes help support permission lookups.
 
-\- Unknown users and missing permissions.
+### Default deny
 
-\- Wildcard and nested-resource matching.
+Requests without a matching permission are denied. This avoids granting access merely because a rule is absent.
 
-\- Overlapping allow and deny rules.
+### Specificity and deny precedence
 
-\- More-specific versus more-general resource patterns.
+Specificity supports general and resource-specific policies. Deny precedence for equally specific conflicting rules provides a predictable resolution strategy. Tests are important because changes to matching or precedence logic can unintentionally grant access.
 
-\- Invalid or expired access tokens.
+## Security Considerations
 
-\- Unsupported HTTP methods and invalid request bodies.
+- Validate JWT signatures, expiration, issuer, and audience before trusting token claims.
+- Restrict accepted signing algorithms to the configured set.
+- Keep secrets in environment variables or a secret manager.
+- Never commit `.env`, access tokens, or client secrets.
+- Avoid logging access tokens or sensitive authentication details.
+- Use HTTPS in deployed environments.
+- Consider rate limiting and request-size limits for production.
+- Review permission patterns and precedence carefully to avoid unintended access grants.
 
+## Areas for Improvement
 
+- Add integration tests using controlled JWTs and an isolated test database.
+- Expand end-to-end coverage against a configured identity provider.
+- Add structured audit logging for authorization decisions without recording tokens or secrets.
+- Add rate limiting and request-size limits.
+- Consider permission caching with an explicit invalidation strategy.
+- Add continuous integration to run tests automatically.
+- Add production deployment configuration, monitoring, and operational health checks.
 
-\## Design Decisions and Trade-offs
+## Submission Checklist
 
-
-
-\### SQLite
-
-
-
-SQLite provides a lightweight database without requiring a separate database server. It is convenient for local development and a take-home assignment. A server-based database may be more suitable for deployments with higher concurrency or distributed workloads.
-
-
-
-\### FastAPI
-
-
-
-FastAPI provides request validation, structured API responses, and interactive documentation through `/docs`.
-
-
-
-\### OAuth2 and JWT validation
-
-
-
-The service delegates token issuance to an external identity provider. It validates the access token before trusting identity claims, keeping authentication separate from permission evaluation.
-
-
-
-\### Database-backed permissions
-
-
-
-Storing permissions in SQLite allows the service to evaluate user-specific rules without hardcoding every permission in the API. Indexes help reduce the cost of looking up permissions.
-
-
-
-\### Default deny
-
-
-
-Requests without a matching permission are denied. This avoids granting access simply because no rule was found.
-
-
-
-\### Resource matching
-
-
-
-Wildcard and specificity rules support flexible resource policies, but overlapping patterns can create ambiguity. Automated tests are important to ensure that changes to matching logic do not unintentionally grant access.
-
-
-
-\## Security Considerations
-
-
-
-\- Validate JWT signatures, expiration, issuer, and audience before trusting token claims.
-
-\- Keep secrets in environment variables or a secret manager.
-
-\- Never commit `.env`, access tokens, or client secrets.
-
-\- Do not log access tokens or sensitive authentication details.
-
-\- Use HTTPS in deployed environments.
-
-\- Consider rate limiting and request-size limits for production.
-
-\- Review permission precedence carefully to avoid unintended access grants.
-
-
-
-\## Areas for Improvement
-
-
-
-\- Add integration tests using an isolated test database and controlled test tokens.
-
-\- Add comprehensive tests for specificity, deny precedence, and wildcard edge cases.
-
-\- Add structured audit logging for authorization decisions without recording tokens or secrets.
-
-\- Add rate limiting and request-size limits.
-
-\- Consider permission caching with a clear invalidation strategy.
-
-\- Add continuous integration to run tests automatically.
-
-\- Add production deployment configuration, monitoring, and health checks.
-
-
-
-\## Submission Checklist
-
-
-
-\- \[ ] Source code is organized and documented.
-
-\- \[ ] Dependencies are listed in `requirements.txt`.
-
-\- \[ ] `.env.example` contains placeholders only.
-
-\- \[ ] `.env` and local database files are excluded from Git.
-
-\- \[ ] Automated tests pass.
-
-\- \[ ] Permission-matching and deny-precedence edge cases are tested.
-
-\- \[ ] README includes setup instructions and API examples.
-
-\- \[ ] A 2–3 minute demonstration video is recorded.
-
-\- \[ ] Repository link and submission notes are prepared.
-
+- [ ] Source code is organized and documented.
+- [ ] Dependencies are listed in `requirements.txt`.
+- [ ] `.env.example` contains placeholders only.
+- [ ] `.env` and local database files are excluded from Git.
+- [ ] Automated tests pass.
+- [ ] Wildcard matching and permission precedence are covered by tests.
+- [ ] README contains setup instructions and API examples.
+- [ ] The application has been checked with a configured Auth0 tenant.
+- [ ] A 2–3 minute demonstration video is recorded, if required by the assignment.
+- [ ] Repository link and submission notes are prepared.
