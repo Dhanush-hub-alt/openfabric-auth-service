@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from typing import Optional, Union
 
@@ -24,6 +23,7 @@ SAMPLE_PERMISSIONS = [
         "accounts",
         "allow",
     ),
+    (13, "user456", "write", "wallets/wallet-789/transactions", "deny"),
 ]
 
 

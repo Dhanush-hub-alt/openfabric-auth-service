@@ -4,17 +4,30 @@ from app.services.authorization import get_action, check_permission
 
 def main():
     tests = [
-        # Existing tests
         ("user123", "GET", "transactions", True),
         ("user123", "DELETE", "transactions/txn-456", False),
         ("user456", "GET", "wallets/wallet-789/transactions", True),
         ("user456", "POST", "wallets/wallet-789", True),
         ("user456", "POST", "wallets/wallet-456", False),
-
-        # Wildcard and admin tests
         ("user456", "GET", "wallets/wallet-456", True),
-        ("user789", "POST", "wallets/wallet-456/transactions/txn-999", True),
-        ("user789", "POST", "wallets/wallet-789/transactions", False),
+        (
+            "user789",
+            "POST",
+            "wallets/wallet-456/transactions/txn-999",
+            True,
+        ),
+        (
+            "user789",
+            "POST",
+            "wallets/wallet-789/transactions",
+            True,
+        ),
+        (
+            "user456",
+            "POST",
+            "wallets/wallet-789/transactions",
+            False,
+        ),
         ("admin789", "DELETE", "accounts/acc-123/settings", True),
     ]
 
